@@ -3,6 +3,7 @@ logs/
 resources/runtime/nginx-dev/
 resources/runtime/mysql-data/
 resources/runtime/redis-dev/
+resources/runtime/*.zip
 config/local-env.ps1
 .idea/
 .vscode/

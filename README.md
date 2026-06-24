@@ -1,47 +1,55 @@
-# 黑马点评 Redis 实战学习工作区
+# Review Platform
 
-这个工作区是从 `D:\BaiduNetdiskDownload\02-实战篇` 重新整理出来的学习版，原始资料没有被改动。目录里同时保留了课程起始代码、完整实现代码、前端静态页、讲义、SQL、压测脚本和素材，方便你一边复现一边对照。
+Review Platform is a Dianping-style local services demo. It contains two Spring Boot backends, static frontend pages, database scripts, Redis/MySQL configuration, and operational notes for running the project locally.
 
-## 目录说明
+## Structure
 
-| 路径 | 作用 |
+| Path | Description |
 | --- | --- |
-| `backend/hm-dianping-starter` | 课程起始后端代码，适合按讲义一步步补 Redis 功能 |
-| `backend/hm-dianping-complete` | 完整实现版后端代码，适合运行验证和对照答案 |
-| `frontend/hmdp` | 黑马点评前端静态页面，接口默认走 `/api` |
-| `docs/Redis实战篇.md` | 原课程讲义，已按 UTF-8 复制 |
-| `docs/项目启动指南.md` | 当前机器的启动、账号密码和验证说明 |
-| `docs/项目学习指南.md` | 按章节复现项目的学习路径 |
-| `docs/项目启动与功能操作教学.md` | 启动、页面操作、接口验证、Redis/MySQL 观察与排错 |
-| `docs/学习路线.md` | 推荐学习顺序和每章复现目标 |
-| `docs/本地复现指南.md` | 从启动依赖到跑前后端的步骤 |
-| `docs/代码导读.md` | Redis 主题与关键代码文件索引 |
-| `docs/章节任务卡.md` | 按章节打卡的复现任务 |
-| `docs/API接口清单.md` | 前后端接口与对应学习点 |
-| `docs/Redis-Key速查.md` | Redis key、数据结构和代码位置 |
-| `docs/当前启动状态.md` | 本机当前启动情况和限制 |
-| `resources/db/hmdp.sql` | MySQL 初始化脚本 |
-| `resources/jmeter/秒杀抢购.jmx` | 秒杀压测脚本 |
-| `resources/materials/素材` | 探店素材图片与文案 |
-| `resources/runtime/nginx-1.18.0.zip` | 原课程 Nginx 包备份 |
+| `backend/hm-dianping-starter` | Starter backend used for incremental implementation |
+| `backend/hm-dianping-complete` | Complete backend used for verification and comparison |
+| `frontend/hmdp` | Static frontend pages; API requests are sent through `/api` |
+| `resources/db/hmdp.sql` | MySQL initialization script |
+| `resources/jmeter/秒杀抢购.jmx` | Voucher seckill load-test script |
+| `resources/materials/素材` | Image and text materials used by the demo |
+| `scripts/start-starter.ps1` | Local helper script for the starter backend |
+| `scripts/stop-local.ps1` | Stops local backend/frontend helper processes |
+| `config/local-env.example.ps1` | Example environment variable file |
 
-## 最短运行路径
+## Documentation
 
-1. 启动依赖：
+| File | Description |
+| --- | --- |
+| `docs/项目启动指南.md` | Local startup options and configuration |
+| `docs/功能操作指南.md` | Feature operation guide and verification steps |
+| `docs/本地复现指南.md` | Reproduction guide from dependencies to frontend access |
+| `docs/API接口清单.md` | Main backend API list |
+| `docs/Redis-Key速查.md` | Redis key and data-structure reference |
+| `docs/代码导读.md` | Backend module and Redis-related code map |
+
+## Quick Start
+
+1. Start infrastructure:
 
 ```powershell
 docker compose up -d
 ```
 
-2. 运行完整后端：
+2. Configure local credentials:
+
+```powershell
+Copy-Item .\config\local-env.example.ps1 .\config\local-env.ps1
+notepad .\config\local-env.ps1
+. .\config\local-env.ps1
+```
+
+3. Run a backend:
 
 ```powershell
 cd backend\hm-dianping-complete
 mvn spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
-3. 访问前端：
+4. Serve the frontend with Nginx or another static server that proxies `/api` to `http://127.0.0.1:8081`.
 
-使用课程 Nginx 更贴近原环境；如果只是快速看页面，可以先打开 `frontend/hmdp/index.html`，但接口请求需要 `/api` 代理到 `http://127.0.0.1:8081`。
-
-完整步骤见 `docs/本地复现指南.md`。
+See `docs/项目启动指南.md` for detailed commands.

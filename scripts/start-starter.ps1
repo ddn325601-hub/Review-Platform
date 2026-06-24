@@ -11,29 +11,32 @@ if (Test-Path -LiteralPath $envFile) {
 
 New-Item -ItemType Directory -Force -Path (Join-Path $root "logs") | Out-Null
 
-$redisExisting = Get-NetTCPConnection -LocalPort 6380 -ErrorAction SilentlyContinue |
+$redisPort = if ($env:HMDP_REDIS_PORT) { [int]$env:HMDP_REDIS_PORT } else { 6379 }
+$redisPassword = if ($env:HMDP_REDIS_PASSWORD) { $env:HMDP_REDIS_PASSWORD } else { "" }
+$redisExisting = Get-NetTCPConnection -LocalPort $redisPort -ErrorAction SilentlyContinue |
   Where-Object State -eq "Listen" |
   Select-Object -ExpandProperty OwningProcess -Unique
 if ($redisExisting) {
-  Write-Host "Project Redis already appears to be listening on 6380. PID(s): $($redisExisting -join ', ')"
+  Write-Host "Redis already appears to be listening on $redisPort. PID(s): $($redisExisting -join ', ')"
 } else {
   $redisRoot = Join-Path $root "resources\runtime\redis-dev"
   New-Item -ItemType Directory -Force -Path $redisRoot | Out-Null
-  $redisConfig = Join-Path $redisRoot "redis-6380.conf"
+  $redisConfig = Join-Path $redisRoot "redis-dev.conf"
+  $requirePass = if ($redisPassword) { "requirepass $redisPassword" } else { "" }
   @"
-port 6380
+port $redisPort
 bind 127.0.0.1
-requirepass l798267901
+$requirePass
 appendonly yes
 dir ./
-logfile "redis-6380.log"
+logfile "redis-dev.log"
 "@ | Set-Content -LiteralPath $redisConfig -Encoding ASCII
-  $redisExe = "D:\Program Files\Redis\redis-server.exe"
-  if (Test-Path -LiteralPath $redisExe) {
+  $redisExe = if ($env:HMDP_REDIS_SERVER_EXE) { $env:HMDP_REDIS_SERVER_EXE } else { "redis-server.exe" }
+  if ((Get-Command $redisExe -ErrorAction SilentlyContinue) -or (Test-Path -LiteralPath $redisExe)) {
     $redis = Start-Process -FilePath $redisExe -ArgumentList @($redisConfig) -WorkingDirectory $redisRoot -WindowStyle Hidden -PassThru
     Write-Host "Started project Redis. PID=$($redis.Id)"
   } else {
-    Write-Host "Redis executable not found at $redisExe. Start Redis 6380 manually or update HMDP_REDIS_* variables."
+    Write-Host "Redis executable not found. Start Redis manually or set HMDP_REDIS_SERVER_EXE."
   }
 }
 
@@ -57,25 +60,26 @@ if ($existing) {
   Write-Host "Started backend starter. PID=$($proc.Id)"
 }
 
-$nginxRoot = Join-Path $root "resources\runtime\nginx-dev\nginx-1.18.0"
-if (-not (Test-Path -LiteralPath (Join-Path $nginxRoot "nginx.exe"))) {
-  $runtime = Join-Path $root "resources\runtime\nginx-dev"
-  New-Item -ItemType Directory -Force -Path $runtime | Out-Null
-  Expand-Archive -LiteralPath (Join-Path $root "resources\runtime\nginx-1.18.0.zip") -DestinationPath $runtime -Force
-  (Get-Content -LiteralPath (Join-Path $nginxRoot "conf\nginx.conf") -Raw) -replace "listen\s+8080;", "listen       8082;" |
-    Set-Content -LiteralPath (Join-Path $nginxRoot "conf\nginx.conf") -Encoding UTF8
-}
-
-$nginxExisting = Get-NetTCPConnection -LocalPort 8082 -ErrorAction SilentlyContinue |
-  Where-Object State -eq "Listen" |
-  Select-Object -ExpandProperty OwningProcess -Unique
-if ($nginxExisting) {
-  Write-Host "Frontend already appears to be listening on 8082. PID(s): $($nginxExisting -join ', ')"
+$nginxRoot = if ($env:HMDP_NGINX_ROOT) {
+  $env:HMDP_NGINX_ROOT
 } else {
-  $nginx = Start-Process -FilePath (Join-Path $nginxRoot "nginx.exe") -WorkingDirectory $nginxRoot -WindowStyle Hidden -PassThru
-  Write-Host "Started frontend nginx. PID=$($nginx.Id)"
+  Join-Path $root "resources\runtime\nginx-dev\nginx-1.18.0"
 }
+$nginxExe = Join-Path $nginxRoot "nginx.exe"
+if (Test-Path -LiteralPath $nginxExe) {
+  $nginxExisting = Get-NetTCPConnection -LocalPort 8082 -ErrorAction SilentlyContinue |
+    Where-Object State -eq "Listen" |
+    Select-Object -ExpandProperty OwningProcess -Unique
+  if ($nginxExisting) {
+    Write-Host "Frontend already appears to be listening on 8082. PID(s): $($nginxExisting -join ', ')"
+  } else {
+    $nginx = Start-Process -FilePath $nginxExe -WorkingDirectory $nginxRoot -WindowStyle Hidden -PassThru
+    Write-Host "Started frontend nginx. PID=$($nginx.Id)"
+  }
 
-Write-Host "Frontend: http://127.0.0.1:8082"
+  Write-Host "Frontend: http://127.0.0.1:8082"
+} else {
+  Write-Host "Nginx executable not found. Set HMDP_NGINX_ROOT or start a static server with /api proxy manually."
+}
 Write-Host "Backend:  http://127.0.0.1:8081"
 Write-Host "Logs:     $stdout"
